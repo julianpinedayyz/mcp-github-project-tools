@@ -1,40 +1,31 @@
 # Example Output: GetGithubProjectDetails
 
-This is an example output from calling the `GetGithubProjectDetails` MCP tool for the project `@julianpinedayyz's smartyTabs` (ID: `PVT_kwHOAA4FQ84A1tRc`).
+This is an example output from calling the `GetGithubProjectDetails` MCP tool for a project configured via environment variables (e.g., project ID: `PVT_EXAMPLE123`).
 
 ```markdown
-# @julianpinedayyz's smartyTabs
+# Sample Project Board
 
-**URL:** https://github.com/users/julianpinedayyz/projects/2
-**Created:** 4/1/2025, 9:46:54 AM
-**Updated:** 4/10/2025, 10:23:53 PM
+**URL:** https://github.com/users/octocat/projects/1
+**Created:** 1/1/2024, 10:00:00 AM
+**Updated:** 1/15/2024, 02:30:00 PM
 
-## Fields (15)
+## Fields (8)
 - Title (TITLE)
 - Assignees (ASSIGNEES)
 - Status (ProjectV2SingleSelectField)
 - Labels (LABELS)
-- Linked pull requests (LINKED_PULL_REQUESTS)
-- Milestone (MILESTONE)
 - Repository (REPOSITORY)
-- Reviewers (REVIEWERS)
-- Parent issue (PARENT_ISSUE)
-- Sub-issues progress (SUB_ISSUES_PROGRESS)
+- Milestone (MILESTONE)
 - Priority (ProjectV2SingleSelectField)
 - Size (ProjectV2SingleSelectField)
-- Estimate (NUMBER)
-- Start date (DATE)
-- End date (DATE)
 
-## Views (6)
-- Backlog (BOARD_LAYOUT)
-- Priority board (BOARD_LAYOUT)
-- Team items (TABLE_LAYOUT)
-- Roadmap (ROADMAP_LAYOUT)
-- In review (TABLE_LAYOUT)
-- My items (TABLE_LAYOUT)
+## Views (3)
+- Kanban Board (BOARD_LAYOUT)
+- Task List (TABLE_LAYOUT)
+- Team Roadmap (ROADMAP_LAYOUT)
 
-## Items (2)
-- Add timestamp tracking for saved tabs (smartyTabs#1)
-- Bug: 3-dots menu visibility issue in SavedTabItem (smartyTabs#2)
+## Items (3)
+- Design the new UI (example-repo#10)
+- Implement feature X (example-repo#12)
+- Draft Issue: Document API changes
 ```
