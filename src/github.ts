@@ -286,6 +286,80 @@ async function fetchProjectDetails(args: GetProjectDetailsArgs): Promise<Project
   }
 }
 
+// New function to fetch the Project ID for a given repository
+async function fetchProjectIdForRepo(owner: string, repo: string): Promise<string | null> {
+  const GITHUB_PAT = process.env.GITHUB_PAT;
+  console.error(`Checking GITHUB_PAT for Project ID lookup...`);
+
+  if (!GITHUB_PAT) {
+    console.error("GitHub PAT not found for Project ID lookup.");
+    throw new Error("GitHub PAT not found in environment variables.");
+  }
+
+  console.error(`Looking for Project V2 ID for repository: ${owner}/${repo}`);
+
+  // GraphQL query to find the project associated with the repository
+  // This query assumes the project is owned by the same owner as the repo.
+  // Adjust if projects can be owned by organizations or other users.
+  const graphqlQuery = `
+    query GetRepositoryProject($owner: String!, $repo: String!) {
+      repository(owner: $owner, name: $repo) {
+        projectsV2(first: 1) { # Assuming only one project per repo for this tool
+          nodes {
+            id
+            title
+          }
+        }
+      }
+    }
+  `;
+
+  try {
+    const response = await fetch("https://api.github.com/graphql", {
+      method: "POST",
+      headers: {
+        Authorization: `bearer ${GITHUB_PAT}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: graphqlQuery,
+        variables: { owner, repo },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `GitHub API request failed for Project ID lookup: ${response.status} ${response.statusText} - ${errorText}`
+      );
+    }
+
+    const data = await response.json();
+
+    if (data.errors) {
+      console.error("GitHub GraphQL API errors during Project ID lookup:", data.errors);
+      throw new Error(`GraphQL error during Project ID lookup: ${data.errors[0]?.message || 'Unknown GraphQL error'}`);
+    }
+
+    const projectNode = data?.data?.repository?.projectsV2?.nodes?.[0];
+
+    if (projectNode && projectNode.id) {
+      console.error(`Found Project V2 ID: ${projectNode.id} (${projectNode.title}) for ${owner}/${repo}`);
+      return projectNode.id;
+    } else {
+      console.error(`No Project V2 found linked to repository ${owner}/${repo}`);
+      return null; // Return null if no project is found
+    }
+
+  } catch (error) {
+    console.error("Error fetching Project ID for repository:", error);
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch Project ID for ${owner}/${repo}: ${error.message}`);
+    }
+    throw new Error(`An unknown error occurred while fetching the Project ID for ${owner}/${repo}.`);
+  }
+}
+
 // --- MCP Server Setup for GitHub Tool ---
 
 // Create an MCP server instance specifically for the GitHub tool(s)
@@ -337,31 +411,47 @@ server.tool(
   }
 );
 
-// Register the new tool for getting project details
+// Register the GetGithubProjectDetails tool (updated)
 server.tool(
-  "GetGithubProjectDetails", // Tool name for MCP
-  "Get detailed information about a specific GitHub Project V2",
-  { /* No input arguments needed for now - will use hardcoded project ID */},
-  async (args: any) => { // Use a generic args type
+  "GetGithubProjectDetails",
+  "Get detailed information about the GitHub Project V2 linked to the repository configured in the environment variables (GITHUB_OWNER, GITHUB_REPO).",
+  { /* No input arguments needed - uses environment variables */ },
+  async () => { // No args expected
     try {
-      // Use a default project ID for now since no parameters are expected
-      const projectId = "PVT_kwHOAA4FQ84A1tRc"; // hardcoded ID for demo purposes
+      // Read owner and repo from environment variables
+      const owner = process.env.GITHUB_OWNER;
+      const repo = process.env.GITHUB_REPO;
 
-      // Call the fetching logic for project details with the hardcoded project ID
+      if (!owner || !repo) {
+        throw new Error("GITHUB_OWNER and GITHUB_REPO must be set in environment variables.");
+      }
+
+      // Fetch the project ID for the configured repository
+      const projectId = await fetchProjectIdForRepo(owner, repo);
+
+      if (!projectId) {
+        // If no project ID found, return a specific message
+        return {
+          content: [
+            {
+              type: "text",
+              text: `No GitHub Project V2 found linked to the repository ${owner}/${repo}.`,
+            },
+          ],
+        };
+      }
+
+      // Call the fetching logic for project details with the found ID
       const projectDetails = await fetchProjectDetails({ projectId });
 
-      // Format the result for MCP
+      // Format the result for MCP (remains the same)
       let outputText = `# ${projectDetails.title}\n\n`;
-
       if (projectDetails.description) {
         outputText += `**Description:** ${projectDetails.description}\n\n`;
       }
-
       outputText += `**URL:** ${projectDetails.url}\n`;
       outputText += `**Created:** ${new Date(projectDetails.createdAt).toLocaleString()}\n`;
       outputText += `**Updated:** ${new Date(projectDetails.updatedAt).toLocaleString()}\n\n`;
-
-      // Add fields information
       outputText += `## Fields (${projectDetails.fields.length})\n`;
       if (projectDetails.fields.length > 0) {
         projectDetails.fields.forEach(field => {
@@ -371,8 +461,6 @@ server.tool(
         outputText += "No fields defined\n";
       }
       outputText += "\n";
-
-      // Add views information
       outputText += `## Views (${projectDetails.views.length})\n`;
       if (projectDetails.views.length > 0) {
         projectDetails.views.forEach(view => {
@@ -382,8 +470,6 @@ server.tool(
         outputText += "No views defined\n";
       }
       outputText += "\n";
-
-      // Add items information
       outputText += `## Items (${projectDetails.items.length})\n`;
       if (projectDetails.items.length > 0) {
         projectDetails.items.forEach(item => {
@@ -410,7 +496,6 @@ server.tool(
         ],
       };
     } catch (error: any) {
-      // Log error details to stderr before returning error response
       console.error("Error in GetGithubProjectDetails tool handler:", error);
       return {
         content: [
