@@ -144,7 +144,6 @@ async function fetchProjectDetails(args: GetProjectDetailsArgs): Promise<Project
         ... on ProjectV2 {
           id
           title
-          description
           url
           createdAt
           updatedAt
@@ -266,7 +265,7 @@ async function fetchProjectDetails(args: GetProjectDetailsArgs): Promise<Project
     const projectDetails: ProjectDetails = {
       id: projectNode.id,
       title: projectNode.title,
-      description: projectNode.description,
+      description: null,
       url: projectNode.url,
       createdAt: projectNode.createdAt,
       updatedAt: projectNode.updatedAt,
@@ -342,17 +341,14 @@ server.tool(
 server.tool(
   "GetGithubProjectDetails", // Tool name for MCP
   "Get detailed information about a specific GitHub Project V2",
-  {
-    projectId: {
-      description: "The ID of the project to retrieve details for",
-      type: "string",
-      required: true,
-    },
-  },
-  async (args: GetProjectDetailsArgs) => {
+  { /* No input arguments needed for now - will use hardcoded project ID */},
+  async (args: any) => { // Use a generic args type
     try {
-      // Call the fetching logic for project details
-      const projectDetails = await fetchProjectDetails(args);
+      // Use a default project ID for now since no parameters are expected
+      const projectId = "PVT_kwHOAA4FQ84A1tRc"; // hardcoded ID for demo purposes
+
+      // Call the fetching logic for project details with the hardcoded project ID
+      const projectDetails = await fetchProjectDetails({ projectId });
 
       // Format the result for MCP
       let outputText = `# ${projectDetails.title}\n\n`;
