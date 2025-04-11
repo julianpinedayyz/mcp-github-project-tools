@@ -1,4 +1,5 @@
-import 'dotenv/config'; // Load .env file variables
+// Remove dotenv import
+// import dotenv from 'dotenv';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -14,16 +15,23 @@ interface Project {
   title: string;
 }
 
-async function fetchGitHubProjects(args: ListProjectsArgs): Promise<Project[]> {
-  console.log("Fetching GitHub Projects...");
+// Remove path calculation logic
 
-  // Read token from environment variable (loaded from .env by dotenv)
+async function fetchGitHubProjects(args: ListProjectsArgs): Promise<Project[]> {
+  // --- Read Token directly from process.env (set by mcp.json 'env') ---
   const GITHUB_PAT = process.env.GITHUB_PAT;
+  console.error(`Checking for GITHUB_PAT in process.env`); // Debug log
+
+  console.error("Fetching GitHub Projects...");
 
   if (!GITHUB_PAT) {
-      throw new Error("GitHub PAT not found in environment variables. Ensure it's set in the .env file.");
+      // Error if MCP didn't inject the variable
+      console.error("GitHub PAT check failed! Variable not found in process.env.");
+      throw new Error("GitHub PAT not found in environment variables (expected from mcp.json 'env').");
   }
+  console.error(`GITHUB_PAT found, length: ${GITHUB_PAT.length}`); // Confirm it was found
 
+  // Token retrieved from process.env, proceed as before
   const graphqlQuery = `
     query {
       viewer {
@@ -62,10 +70,11 @@ async function fetchGitHubProjects(args: ListProjectsArgs): Promise<Project[]> {
     }
 
     const projects: Project[] = data?.data?.viewer?.projectsV2?.nodes || [];
-    console.log(`Fetched ${projects.length} projects.`);
+    console.error(`Fetched ${projects.length} projects.`);
     return projects;
 
   } catch (error) {
+    // Log error details to stderr
     console.error("Error fetching GitHub projects:", error);
     if (error instanceof Error) {
          throw new Error(`Failed to fetch projects: ${error.message}`);
@@ -111,8 +120,8 @@ server.tool(
         ],
       };
     } catch (error: any) {
-      // Handle errors and return an error message to the user
-      console.error("Error in ListGithubProjects tool:", error);
+      // Log error details to stderr before returning error response
+      console.error("Error in ListGithubProjects tool handler:", error);
       return {
         content: [
           {
@@ -129,11 +138,12 @@ server.tool(
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  // Log specifically for this server instance
+  // Log server startup message to stderr
   console.error("GitHub MCP Server running on stdio");
 }
 
 main().catch((error) => {
+  // Log fatal error to stderr
   console.error("GitHub MCP Fatal error:", error);
   process.exit(1);
 });
